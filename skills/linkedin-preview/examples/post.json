@@ -1,0 +1,9 @@
+{
+  "title": "Three support tickets",
+  "author": { "name": "Alex Morgan", "title": "Head of Product at Northwind", "avatar": null },
+  "post": "Our most used screen started as three support tickets.\nNobody flagged them. Nobody asked for a new feature.\nEach ticket used different words, and all three wanted the same thing: to see every open order on one page instead of clicking through five tabs.\n\nWhat does your support queue keep asking for in words that never make it onto the roadmap?",
+  "first_comment": "The ticket-reading routine, step by step: https://example.com/blog/reading-support-tickets",
+  "checklist": ["The customer quotes are cleared for public use"],
+  "notes": [{ "title": "Notes", "text": "A short JSON version of the same post." }],
+  "image": null
+}

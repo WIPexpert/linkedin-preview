@@ -1,0 +1,16 @@
+{
+  "name": "linkedin-preview",
+  "owner": {
+    "name": "Mike Daykhin"
+  },
+  "metadata": {
+    "description": "Write a LinkedIn post and preview it in the feed before you publish."
+  },
+  "plugins": [
+    {
+      "name": "linkedin-preview",
+      "source": "./",
+      "description": "Write a LinkedIn post and preview it in the feed before you publish."
+    }
+  ]
+}

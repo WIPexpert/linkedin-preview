@@ -1,0 +1,697 @@
+<!doctype html>
+<!--
+  linkedin-preview · LinkedIn preview skill · v1
+  One LinkedIn post, ready to publish: the feed preview on a phone and on a
+  desktop (with the "…more" cut), an editor with a live counter, copy buttons,
+  the first comment, a checklist and notes.
+
+  One static file: no build step, no network, inline CSS and JS. Everything the
+  page shows comes from the JSON block with id="post-data". Fill it with
+  scripts/render.py <input>; do not hand-edit the rest. Opened as is, the page
+  shows the sample data below.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LinkedIn post</title>
+<style>
+:root {
+  --ink: #1a1410; --ink-mid: #3b3632; --ink-strong: #585450; --ink-soft: #7e7a77; --ink-faint: #a4a19d;
+  --line-strong: #c4c1be; --line: #dedcd9; --line-faint: #ece9e6;
+  --cream: #f9f7f4; --white: #fff;
+  --warning: #945f1a; --warning-bg: #fcf2e1; --success: #377d17; --success-bg: #ecf9e7;
+  --danger: #c81e1e;
+  --accent: #ff5b1f; --on-accent: #fff; --glow: rgba(255,91,31,0.45); --tint: #ffe8db; --head: #e2470f;
+  /* LinkedIn's own colours, for the cards only */
+  --li-text: rgba(0,0,0,0.9); --li-soft: rgba(0,0,0,0.6); --li-line: #e8e8e8; --li-blue: #0a66c2; --li-feed: #f4f2ee;
+  --li-font: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --sans: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --serif: "Iowan Old Style", "Source Serif 4", Charter, Georgia, "Times New Roman", serif;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--cream); color: var(--ink); font: 15px/1.5 var(--sans); overflow-x: hidden; }
+button { font: inherit; color: inherit; cursor: pointer; }
+a { color: inherit; }
+
+.wrap { max-width: 1320px; margin: 0 auto; padding: 24px 16px 64px; }
+@media (min-width: 640px) { .wrap { padding: 32px 24px 80px; } }
+
+/* ---------------------------------------------------------------- page head */
+.eyebrow { font-size: 11px; line-height: 1.2; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-soft); }
+.head { display: flex; flex-direction: column; gap: 10px; padding-bottom: 24px; }
+.head h1 { margin: 0; font: 600 clamp(28px, 4vw, 44px)/1.05 var(--serif); letter-spacing: -0.02em; text-wrap: balance; overflow-wrap: anywhere; }
+.head-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-size: 13px; color: var(--ink-strong); }
+.chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 2px 10px; font-size: 13px; font-weight: 600; line-height: 20px; }
+.chip.ok { background: var(--success-bg); color: var(--success); }
+.chip.warn { background: var(--warning-bg); color: var(--warning); }
+.chip.accent { background: var(--tint); color: var(--head); }
+
+/* ---------------------------------------------------------------- layout */
+.main { display: grid; gap: 20px; align-items: start; }
+.col-edit { min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.col-preview { min-width: 0; }
+@media (min-width: 1100px) {
+  /* 580 = the 538px editor (508px of text) + the panel's 20px sides. */
+  .main { grid-template-columns: 580px minmax(0, 1fr); gap: 28px; }
+  .col-preview { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; border-radius: 24px; }
+}
+
+.panel { background: var(--white); border-radius: 20px; box-shadow: 0 0 0 1px var(--line); padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+@media (min-width: 640px) { .panel { padding: 20px; } }
+.panel h2 { margin: 0; font: 600 22px/1.2 var(--serif); letter-spacing: -0.01em; }
+.panel-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.hint { margin: 0; font-size: 13px; color: var(--ink-soft); }
+
+/* ---------------------------------------------------------------- controls */
+.seg { display: inline-flex; border-radius: 999px; padding: 2px; background: rgba(0,0,0,0.06); font-size: 13px; font-weight: 600; }
+.seg button { display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 999px; padding: 4px 12px; background: transparent; color: var(--ink-mid); transition: background-color 150ms, color 150ms; }
+.seg button[aria-checked="true"] { background: var(--white); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,0.12); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 999px; padding: 9px 18px; font-weight: 600; font-size: 15px; line-height: 20px; background: var(--white); color: var(--ink-strong); box-shadow: 0 0 0 1px var(--line-strong); transition: transform 120ms; }
+.btn:active { transform: scale(0.97); }
+.btn.primary { background: var(--accent); color: var(--on-accent); box-shadow: 0 12px 28px -14px var(--glow); }
+.btn.small { padding: 6px 14px; font-size: 13px; }
+.link-btn { border: 0; background: none; padding: 0; font-size: 13px; color: var(--ink-mid); text-decoration: underline; text-underline-offset: 4px; display: inline-flex; align-items: center; gap: 6px; }
+.link-btn[hidden] { display: none; }
+.icon { width: 16px; height: 16px; flex: none; }
+
+textarea { width: 100%; border-radius: 12px; padding: 12px 14px; font: 16px/1.5 var(--sans); color: var(--ink); background: var(--white); border: 1px solid var(--line-strong); outline: none; resize: vertical; }
+textarea:focus { border-color: var(--ink); }
+/* Who the post is from: name and headline, editable, shown on the cards. */
+.who { display: grid; gap: 10px; }
+@media (min-width: 640px) { .who { grid-template-columns: 2fr 3fr; } }
+.who label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; color: var(--ink-strong); min-width: 0; }
+.who input { width: 100%; border-radius: 10px; padding: 8px 12px; font: 15px/1.4 var(--sans); color: var(--ink); background: var(--white); border: 1px solid var(--line-strong); outline: none; }
+.who input:focus { border-color: var(--ink); }
+/* The post editor wraps like LinkedIn's desktop feed: the same 508px text
+   block, font and 14/20 type, so a line here is a line there. It grows with
+   the text instead of scrolling, so no scrollbar steals width. On a screen
+   narrower than that it takes the full width and wraps sooner. */
+textarea.compose { width: min(100%, 538px); padding: 12px 14px; font: 14px/20px var(--li-font); color: var(--li-text); resize: none; overflow: hidden; min-height: 200px; }
+.count { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; font-size: 13px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.count .n { font-weight: 600; color: var(--ink-strong); }
+.count.near .n { color: var(--warning); }
+.count.over .n { color: var(--danger); }
+.row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+
+/* ---------------------------------------------------------------- the feed
+   The page's own type runs 11 / 13 / 15 / 18 / 22 with serif headings.
+   The .li card below keeps LinkedIn's sizes (12 / 14 / 15 / 16) on purpose:
+   it draws LinkedIn, not this page. */
+.feed { background: var(--li-feed); border-radius: 24px; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+@media (min-width: 640px) { .feed { padding: 16px; } }
+.cards { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; justify-content: center; }
+.fit { display: flex; justify-content: center; min-width: 0; }
+.fit.phone { flex: 1 1 380px; max-width: 380px; }
+.fit.desktop { flex: 1 1 550px; max-width: 550px; }
+.fit-label { font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-soft); padding: 0 0 6px 4px; }
+.fit-col { display: flex; flex-direction: column; width: 100%; min-width: 0; }
+.slot { min-width: 0; }
+/* The card not on screen, still laid out so its cut can be counted. */
+.offstage { position: absolute; left: -10000px; top: 0; visibility: hidden; pointer-events: none; }
+
+/* A LinkedIn post card, drawn at its real width and shrunk with zoom to fit.
+   Desktop, measured on LinkedIn: the head is at most 550 x 62, the first three
+   lines of text are a 508 x 60 block (14px text, 20px lines), so 21px sides.
+   Phone: 380 wide, a working estimate. */
+.li { font-family: var(--li-font); background: #fff; color: var(--li-text); display: flex; flex-direction: column; gap: 10px; overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(140,140,140,0.2), 0 14px 32px -18px rgba(10,102,194,0.35); }
+.li.phone { width: 380px; border-radius: 16px; }
+.li.desktop { width: 550px; border-radius: 8px; }
+.li-head { display: flex; align-items: flex-start; gap: 8px; padding: 12px 12px 0; }
+.li.desktop .li-head { padding: 12px 21px 0; max-height: 62px; }
+.li-avatar { width: 48px; height: 48px; border-radius: 50%; flex: none; object-fit: cover; display: grid; place-items: center; background: #e9e5df; color: #8a857d; font-weight: 600; font-size: 17px; }
+.li-who { flex: 1; min-width: 0; line-height: 18px; }
+.li.desktop .li-who { line-height: 17px; }
+.li-who p { margin: 0; overflow-wrap: anywhere; }
+.li-name { font-size: 15px; }
+.li.desktop .li-name { font-size: 14px; }
+.li-name b { font-weight: 600; }
+.li-soft { color: var(--li-soft); font-size: 12px; }
+.li-follow { font-weight: 600; color: var(--li-blue); display: inline-flex; align-items: center; gap: 4px; font-size: 15px; flex: none; }
+.li.desktop .li-follow { font-size: 16px; }
+.li-body { padding: 0 12px; font-size: 15px; line-height: 20px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.li.desktop .li-body { padding: 0 21px; font-size: 14px; }
+.li-body .tag, .li-body .url { color: var(--li-blue); font-weight: 600; }
+/* Under the cards: the counts, measured in the cards themselves. */
+.stats { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--ink-strong); font-variant-numeric: tabular-nums; }
+.stats b { font-weight: 600; color: var(--ink); }
+.stats .over, .stats .over b { color: var(--danger); }
+.li-more { border: 0; background: none; padding: 0; font: inherit; color: var(--li-soft); }
+.li-more:hover { color: var(--li-blue); text-decoration: underline; }
+.li-media { margin: 0 12px; }
+.li.desktop .li-media { margin: 0 21px; }
+.li-image { display: block; width: 100%; height: auto; border-radius: 4px; }
+.li-linkcard { border-radius: 8px; border: 1px solid var(--li-line); display: flex; align-items: center; gap: 12px; overflow: hidden; }
+.li-linkcard i { width: 112px; height: 59px; flex: none; background: repeating-linear-gradient(135deg, #f3f2ef 0 8px, #eceae6 8px 16px); }
+.li.desktop .li-linkcard i { width: 136px; height: 71px; }
+.li-linkcard div { padding-right: 12px; line-height: 18px; min-width: 0; }
+.li-linkcard p { margin: 0; }
+.li-linkcard .t { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.li-social { padding: 0 12px; }
+.li.desktop .li-social { padding: 0 21px; }
+.li-reactions { padding: 8px 0; display: inline-flex; }
+.li-reactions span { width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center; box-shadow: 0 0 0 2px #fff; }
+.li-reactions span + span { margin-left: -4px; }
+.li-bar { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--li-line); color: var(--li-soft); }
+.li-bar span { display: flex; align-items: center; justify-content: center; font-weight: 600; flex-direction: column; gap: 2px; padding: 6px 0; font-size: 12px; }
+.li.desktop .li-bar span { flex-direction: row; gap: 6px; padding: 12px 0; font-size: 14px; }
+.li-bar svg { width: 20px; height: 20px; }
+.li.desktop .li-bar svg { width: 22px; height: 22px; }
+.li-comment { display: flex; align-items: flex-start; gap: 8px; padding: 4px 12px 12px; }
+.li.desktop .li-comment { padding: 4px 21px 12px; }
+.li-comment .li-avatar { width: 32px; height: 32px; font-size: 12px; }
+.li.desktop .li-comment .li-avatar { width: 40px; height: 40px; font-size: 14px; }
+.li-bubble { flex: 1; min-width: 0; background: #f2f2f2; border-radius: 8px; padding: 8px 12px; font-size: 14px; line-height: 20px; }
+.li-bubble p { margin: 0; overflow-wrap: anywhere; }
+.li-bubble .text { white-space: pre-wrap; }
+.li-bubble .url, .li-bubble .tag { color: var(--li-blue); font-weight: 600; }
+.li-author-badge { border-radius: 4px; padding: 0 4px; font-size: 11px; line-height: 16px; font-weight: 600; background: #5e5e5e; color: #fff; margin-left: 6px; }
+.li-reply { padding: 4px 0 0 4px; font-size: 12px; font-weight: 600; color: var(--li-soft); }
+
+/* ---------------------------------------------------------------- blocks */
+.blocks { display: grid; gap: 20px; margin-top: 28px; }
+@media (min-width: 900px) { .blocks { grid-template-columns: 1fr 1fr; } .blocks .wide { grid-column: 1 / -1; } }
+/* Text meant for LinkedIn is never shown as code: monospace is hard to read and
+   invites laying the post out by hand. This page uses no monospace at all, and
+   nothing on it scrolls sideways. */
+.prose { font-size: 15px; color: var(--ink-strong); overflow-wrap: anywhere; }
+.prose > :first-child { margin-top: 0; }
+.prose > :last-child { margin-bottom: 0; }
+.prose p, .prose ul { margin: 0 0 10px; }
+.prose p { white-space: pre-wrap; }
+.prose ul { padding-left: 22px; }
+.prose li { margin: 3px 0; }
+.checks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.checks label { display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: start; padding: 8px 10px; border-radius: 12px; cursor: pointer; color: var(--ink-strong); overflow-wrap: anywhere; }
+.checks label:hover { background: var(--cream); }
+.checks input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--accent); }
+.checks input:checked + span { color: var(--ink-soft); text-decoration: line-through; text-decoration-color: var(--ink-faint); }
+.foot { margin-top: 32px; font-size: 11px; color: var(--ink-soft); }
+.toast { position: fixed; left: 50%; bottom: 20px; transform: translate(-50%, 20px); opacity: 0; max-width: calc(100vw - 32px); text-align: center; background: var(--ink); color: #fff; border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 600; pointer-events: none; transition: opacity 160ms, transform 160ms; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+@media (prefers-reduced-motion: reduce) { .toast, .btn, .seg button { transition: none; } }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="head">
+    <span class="eyebrow">LinkedIn post</span>
+    <h1 id="title"></h1>
+    <div class="head-meta" id="meta"></div>
+  </header>
+
+  <div class="main">
+    <section class="col-edit">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>The post</h2>
+        </div>
+        <div class="who">
+          <label>Name <input id="au-name" type="text" autocomplete="off"></label>
+          <label>Headline <input id="au-title" type="text" autocomplete="off"></label>
+        </div>
+        <textarea id="post" class="compose" rows="10" spellcheck="true" aria-label="The post"></textarea>
+        <div class="count" id="count"></div>
+        <div class="row">
+          <button type="button" class="btn primary" id="copy-post"></button>
+          <button type="button" class="link-btn" id="reset" hidden>Back to the original text</button>
+        </div>
+        <p class="hint">The editor wraps like the LinkedIn desktop feed. Edits stay in this browser only; copy the text to keep it.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h2>First comment</h2>
+          <span class="hint" id="cm-count"></span>
+        </div>
+        <textarea id="comment" rows="4" aria-label="First comment"></textarea>
+        <div class="row">
+          <button type="button" class="btn small" id="copy-comment"></button>
+          <span class="hint" id="cm-note"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="col-preview" aria-labelledby="pv-h">
+      <div class="feed">
+        <div class="row">
+          <span class="eyebrow" id="pv-h">Feed preview</span>
+          <div class="seg" role="radiogroup" id="device" aria-label="Feed preview"></div>
+        </div>
+        <div class="cards" id="cards"></div>
+        <div class="row">
+          <button type="button" class="link-btn" id="fold"></button>
+        </div>
+        <div class="stats" id="pv-stats"></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="blocks" id="blocks"></div>
+  <p class="foot" id="foot"></p>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- The data. render.py replaces the contents of this block; the rest of the file stays as it is. -->
+<script type="application/json" id="post-data">
+{
+ "schema": 1,
+ "title": "Three support tickets",
+ "rendered": "2026-10-28 20:22",
+ "author": {
+  "name": "Alex Morgan",
+  "title": "Head of Product at Northwind",
+  "avatar": null
+ },
+ "limits": {
+  "chars": 3000,
+  "comment": 1250,
+  "line": 80
+ },
+ "post": "Our most used screen started as three support tickets.\nNobody flagged them. Nobody asked for a new feature.\nEach ticket used different words, and all three wanted the same thing: to see every open order on one page instead of clicking through five tabs.\n\nI almost filed them under \"nice to have\". Then I put them side by side on a Friday afternoon and read them again.\n\nOne customer called it \"the big list\". One asked for \"an export, but on the screen\". One wrote a long paragraph that ended with \"just show me everything\".\n\nWe built a plain table in two weeks. No charts, no filters at launch. Six months later it is the first screen most accounts open in the morning, and the tabs it replaced get a fraction of the traffic.\n\nWhat I changed after this: once a month I read the last fifty tickets in one sitting, out of order, with the product names blacked out. The feature requests are rarely where the pattern is. The workarounds are.\n\nWhat does your support queue keep asking for in words that never make it onto the roadmap?",
+ "comment": "The ticket-reading routine, step by step: https://example.com/blog/reading-support-tickets",
+ "image": null,
+ "checklist": [
+  "\"Six months later\" and \"first screen most accounts open\" match the analytics dashboard",
+  "The customer quotes are cleared for public use",
+  "Post on a weekday morning, reply to comments in the first hour"
+ ],
+ "notes": [
+  {
+   "title": "Notes",
+   "text": "Why the hook works: the first line gives a concrete origin story for a screen people use every day, and the second says nobody asked for it, so the reader wants to know who did.\n\nA sharper opening, if you want one: \"Three support tickets built our most used screen.\"\n\nLeft out: the metrics from the launch week. They need the dashboard check above, and the post stands without them. The link sits in the first comment so the post does not send readers off LinkedIn.\n\nIf you need a shorter version, cut the paragraph with the three quotes and keep the rest."
+  }
+ ]
+}
+</script>
+
+<script>
+(() => {
+  "use strict";
+
+  // ---------------------------------------------------------------- data
+
+  const DATA = JSON.parse(document.getElementById("post-data").textContent);
+  const L = Object.assign({ chars: 3000, comment: 1250, line: 80 }, DATA.limits || {});
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const fmt = (n) => n.toLocaleString("en-US");
+  // LinkedIn counts code points, not UTF-16 units.
+  const len = (s) => Array.from(s).length;
+
+  // ---------------------------------------------------------------- state, kept per browser
+
+  function hash(s) {
+    let h = 5381;
+    for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+    return (h >>> 0).toString(36);
+  }
+  const ORIGINAL = { post: DATA.post || "", comment: DATA.comment || "" };
+  // Keyed by the content, so a re-render with a new draft starts clean.
+  const KEY = "linkedin-preview:" + hash(JSON.stringify([DATA.title, ORIGINAL]));
+  const store = {
+    read() { try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch { return null; } },
+    write(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch { /* private window: state lives in memory */ } },
+  };
+  const saved = store.read() || {};
+  const wide = window.matchMedia("(min-width: 640px)").matches;
+  const state = {
+    device: ["phone", "desktop"].includes(saved.device) ? saved.device : (wide ? "desktop" : "phone"),
+    author: Object.assign({ name: "", title: "" }, saved.author || {}),
+    open: false,
+    post: typeof saved.post === "string" ? saved.post : ORIGINAL.post,
+    comment: typeof saved.comment === "string" ? saved.comment : ORIGINAL.comment,
+    checks: saved.checks || {},
+  };
+  const persist = () => store.write({ device: state.device, author: state.author, post: state.post, comment: state.comment, checks: state.checks });
+
+  // ---------------------------------------------------------------- the "…more" cut
+
+  const MORE = '<button type="button" class="li-more" data-open>\u2026more</button>';
+
+  /**
+   * Fold `el` (a card's text box, already in the page) to what the feed shows:
+   * three rendered lines, "…more" at the end of the third. Measured in the card
+   * itself at its real width and font, not counted in characters: a phone card
+   * 380px wide holds about 48-49 characters a line in the system font, so any
+   * fixed count drifts. Line count = height / height of one line, which stays
+   * right under CSS zoom. On top of that, no shown line may hold more than
+   * L.line characters (80, with spaces): LinkedIn never shows a longer one.
+   * Returns whether anything was cut.
+   */
+  function clampToThreeLines(el, post) {
+    el.innerHTML = "x";
+    const one = el.getBoundingClientRect().height;
+    const full = richText(post);
+    if (!one) { el.innerHTML = full; return false; }
+    const fits = (html) => {
+      el.innerHTML = html;
+      if (Math.round(el.getBoundingClientRect().height / one) > 3) return false;
+      return renderedLines(el).every((l) => len(l) <= L.line);
+    };
+    if (fits(full)) { el.innerHTML = full; return false; }
+    // Whole words only: the largest prefix that still fits with "…more" after it.
+    const tokens = post.split(/(\s+)/);
+    const head = (k) => tokens.slice(0, k).join("").replace(/\s+$/, "");
+    const folded = (k) => (head(k) ? richText(head(k)) + " " : "") + MORE;
+    let lo = 0, hi = tokens.length;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (fits(folded(mid))) lo = mid; else hi = mid - 1;
+    }
+    el.innerHTML = folded(lo);
+    return true;
+  }
+
+  /** The rendered lines of a folded card body, as text, without "…more". */
+  function renderedLines(el) {
+    const out = [];
+    let cur = "", top = null;
+    const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, {
+      acceptNode: (n) => (n.parentElement.closest(".li-more") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+    });
+    const r = document.createRange();
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+      for (let i = 0; i < n.length; i++) {
+        if (n.data[i] === "\n") { out.push(cur); cur = ""; top = null; continue; }
+        r.setStart(n, i);
+        r.setEnd(n, i + 1);
+        const box = r.getClientRects()[0];
+        if (!box) continue;
+        if (top !== null && box.top > top + 2) { out.push(cur); cur = ""; }
+        top = box.top;
+        cur += n.data[i];
+      }
+    }
+    out.push(cur);
+    return out.map((l) => l.trim()).filter((l, i, a) => l || i < a.length - 1);
+  }
+
+  // ---------------------------------------------------------------- drawing a card
+
+  const URL_RE = /(https?:\/\/[^\s<]+|\b(?:[\w-]+\.)+[a-z]{2,}\/[^\s<]*)/gi;
+  const TAG_RE = /(^|\s)(#[\p{L}\p{N}_]+)/gu;
+
+  /** Post text as LinkedIn draws it: links without the protocol and hashtags in LinkedIn blue. */
+  function richText(s) {
+    let out = "";
+    let last = 0;
+    for (const m of s.matchAll(URL_RE)) {
+      out += tags(esc(s.slice(last, m.index)));
+      const trail = m[0].match(/[.,;:!?)]+$/);
+      const url = trail ? m[0].slice(0, -trail[0].length) : m[0];
+      out += '<span class="url">' + esc(url.replace(/^https?:\/\//, "")) + "</span>" + esc(trail ? trail[0] : "");
+      last = m.index + m[0].length;
+    }
+    return out + tags(esc(s.slice(last)));
+  }
+  const tags = (html) => html.replace(TAG_RE, '$1<span class="tag">$2</span>');
+
+  // The rendered author, overridden by what the viewer types in Name / Headline.
+  const AUTHOR = Object.assign({ name: "Your Name", title: null, avatar: null }, DATA.author || {});
+  const author = {
+    get name() { return state.author.name.trim() || AUTHOR.name || "Your Name"; },
+    get title() { return state.author.title.trim() || AUTHOR.title || ""; },
+    avatar: AUTHOR.avatar,
+  };
+  const initials = () => (author.name || "?").split(/\s+/).filter(Boolean).map((w) => Array.from(w)[0]).slice(0, 2).join("").toUpperCase();
+  const avatar = (cls = "li-avatar") =>
+    author.avatar ? `<img class="${cls}" src="${esc(author.avatar)}" alt="" aria-hidden="true">` : `<span class="${cls}" aria-hidden="true">${esc(initials())}</span>`;
+
+  const GLOBE = '<svg aria-hidden="true" width="12" height="12" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:-1px"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm4.9 6h-2.1a11 11 0 0 0-1-4.1A5 5 0 0 1 12.9 7zM8 13c-.6-.8-1.3-2.4-1.4-4h2.8c-.1 1.6-.8 3.2-1.4 4zM6.6 7c.1-1.6.8-3.2 1.4-4 .6.8 1.3 2.4 1.4 4H6.6zm-.4-4.1a11 11 0 0 0-1 4.1H3.1a5 5 0 0 1 3.1-4.1zM3.1 9h2.1a11 11 0 0 0 1 4.1A5 5 0 0 1 3.1 9zm6.7 4.1a11 11 0 0 0 1-4.1h2.1a5 5 0 0 1-3.1 4.1z"/></svg>';
+  const BAR = {
+    Like: '<path d="M19.5 10h-4.2l.9-3.8c.2-1-.1-2-.9-2.6l-.5-.4-5 6.1V20h7.6c.9 0 1.7-.6 1.9-1.5l1.6-6c.3-1.3-.6-2.5-1.4-2.5zM4 10h3v10H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+    Comment: '<path d="M7 18.5 3.5 21v-4.6A7.5 7.5 0 0 1 3 13.5C3 8.8 7 5 12 5s9 3.8 9 8.5S17 22 12 22c-1.8 0-3.5-.5-5-1.4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+    Repost: '<path d="M7 7h11l-3-3M17 17H6l3 3M18 7v5M6 17v-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>',
+    Send: '<path d="M21 3 3 10.5l7 2.5 2.5 7zM10 13l11-10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  };
+  const REACTIONS =
+    '<div class="li-reactions" aria-hidden="true">' +
+    '<span style="background:#378fe9"><svg width="9" height="9" viewBox="0 0 24 24" fill="#fff"><path d="M19.5 10h-4.2l.9-3.8c.2-1-.1-2-.9-2.6l-.5-.4-5 6.1V20h7.6c.9 0 1.7-.6 1.9-1.5l1.6-6c.3-1.3-.6-2.5-1.4-2.5zM4 10h3v10H4z"/></svg></span>' +
+    '<span style="background:#6dae4f"><svg width="9" height="9" viewBox="0 0 24 24" fill="#fff"><path d="M12 2l2.4 6.9H22l-6 4.4 2.3 7L12 16l-6.3 4.3 2.3-7-6-4.4h7.6z"/></svg></span>' +
+    '<span style="background:#df704d"><svg width="9" height="9" viewBox="0 0 24 24" fill="#fff"><path d="M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z"/></svg></span></div>';
+
+  /** Under the text: the image when there is one, else LinkedIn's card for the first link. */
+  function media(post) {
+    if (DATA.image && DATA.image.src) return `<div class="li-media"><img class="li-image" src="${esc(DATA.image.src)}" alt="${esc(DATA.image.alt || "")}"></div>`;
+    const m = post.match(/https?:\/\/[^\s]+/);
+    if (!m) return "";
+    let host = m[0];
+    try { host = new URL(m[0].replace(/[.,;:!?)]+$/, "")).host.replace(/^www\./, ""); } catch { /* keep the raw link */ }
+    return `<div class="li-media"><div class="li-linkcard"><i aria-hidden="true"></i><div><p class="t">${esc(host)}</p><p class="li-soft">${esc(host)}</p></div></div></div>`;
+  }
+
+  function card(device) {
+    const post = state.post;
+    const comment = state.comment.trim()
+      ? `<div class="li-comment">${avatar()}<div style="flex:1;min-width:0"><div class="li-bubble">
+          <p><b>${esc(author.name)}</b><span class="li-author-badge">Author</span></p>
+          ${author.title ? `<p class="li-soft" style="line-height:16px">${esc(author.title)}</p>` : ""}
+          <p class="text">${richText(state.comment.trim())}</p></div><p class="li-reply">Like  |  Reply</p></div></div>`
+      : "";
+    return `<article class="li ${device}" aria-label="${device === "phone" ? "Phone" : "Desktop"} preview">
+      <div class="li-head">${avatar()}
+        <div class="li-who">
+          <p class="li-name"><b>${esc(author.name)}</b><span style="color:var(--li-soft)"> • 2nd</span></p>
+          ${author.title ? `<p class="li-soft">${esc(author.title)}</p>` : ""}
+          <p class="li-soft">2h • ${GLOBE}</p>
+        </div>
+        <span class="li-follow"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M14 9H9v5H7V9H2V7h5V2h2v5h5z"/></svg>Follow</span>
+      </div>
+      <div class="li-body">${richText(post)}</div>
+      ${media(post)}
+      <div class="li-social">${REACTIONS}<div class="li-bar">${Object.entries(BAR)
+        .map(([k, p]) => `<span><svg aria-hidden="true" viewBox="0 0 24 24">${p}</svg>${k}</span>`).join("")}</div></div>
+      ${comment}
+    </article>`;
+  }
+
+  // ---------------------------------------------------------------- fitting a card to its slot
+
+  // Each card keeps its real width and is shrunk with zoom, so a desktop line
+  // holds the same words on a small screen, only smaller.
+  const ro = new ResizeObserver((entries) => {
+    for (const e of entries) {
+      const inner = e.target.firstElementChild;
+      if (!inner) continue;
+      const w = e.target.dataset.device === "phone" ? 380 : 550;
+      inner.style.zoom = String(Math.min(1, e.contentRect.width / w));
+    }
+  });
+
+  const DEVICE_LABEL = { phone: "Phone", desktop: "Desktop" };
+
+  function drawCards() {
+    // Both cards are drawn: the chosen one on screen, the other off-screen at
+    // its real width, so the counts below cover the phone and the desktop.
+    const box = $("cards");
+    ro.disconnect();
+    box.innerHTML = ["phone", "desktop"]
+      .map((d) => `<div class="fit ${d}${d === state.device ? "" : " offstage"}"${d === state.device ? "" : ' aria-hidden="true"'}><div class="fit-col"><div class="slot" data-device="${d}"><div>${card(d)}</div></div></div></div>`)
+      .join("");
+    box.querySelectorAll(".fit:not(.offstage) .slot").forEach((el) => ro.observe(el));
+    // Fold each card in place; open, the cards show the whole post. The fold
+    // link shows only when some card has something behind "…more".
+    let anyMore = false;
+    const stats = [];
+    box.querySelectorAll(".li-body").forEach((el) => {
+      const cut = clampToThreeLines(el, state.post);
+      anyMore = anyMore || cut;
+      const d = el.closest(".li").classList.contains("phone") ? "phone" : "desktop";
+      if (cut) {
+        const lines = renderedLines(el);
+        const shown = lines.reduce((n, l) => n + len(l), 0);
+        stats.push(`${DEVICE_LABEL[d]}: ${fmt(shown)} characters before \u2026more, lines of ${lines.map((l) => len(l)).join(" / ")}`);
+      } else stats.push(`${DEVICE_LABEL[d]}: shows in full`);
+      if (state.open) el.innerHTML = richText(state.post);
+    });
+    const n = len(state.post);
+    const words = (state.post.match(/\S+/g) || []).length;
+    $("pv-stats").innerHTML =
+      `<span class="${n > L.chars ? "over" : ""}"><b>${fmt(n)} of ${fmt(L.chars)} characters · ${fmt(words)} words</b></span>` +
+      stats.map((x) => `<span>${esc(x)}</span>`).join("");
+    $("fold").hidden = !anyMore;
+    $("fold").innerHTML = (state.open ? ICON.up : ICON.down) + (state.open ? "Fold to what the feed shows" : "Show the whole post");
+  }
+
+  function drawCount() {
+    const n = len(state.post);
+    const max = L.chars;
+    const words = (state.post.match(/\S+/g) || []).length;
+    const el = $("count");
+    el.className = "count" + (n > max ? " over" : n > max * 0.93 ? " near" : "");
+    el.innerHTML = `<span><span class="n">${fmt(n)} of ${fmt(max)} characters</span> · ${n > max ? fmt(n - max) + " over the limit" : fmt(max - n) + " left"}</span><span>${fmt(words)} words</span>`;
+    $("reset").hidden = state.post === ORIGINAL.post;
+    const cn = len(state.comment);
+    $("cm-count").textContent = cn ? `${fmt(cn)} of ${fmt(L.comment)} characters` : "";
+  }
+
+  function drawPreview() { drawCards(); drawCount(); }
+
+  // ---------------------------------------------------------------- controls
+
+  const ICON = {
+    phone: '<svg class="icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 1.5h6a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-11a1 1 0 0 1 1-1zM7 12.5h2"/></svg>',
+    desktop: '<svg class="icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 3h11a1 1 0 0 1 1 1v6.5a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM5.5 14h5M8 11.5V14"/></svg>',
+    copy: '<svg class="icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 5.5h7a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1zM2.5 10.5v-7a1 1 0 0 1 1-1h7"/></svg>',
+    check: '<svg class="icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3 3 7-7"/></svg>',
+    down: '<svg class="icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg>',
+    up: '<svg class="icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10l4-4 4 4"/></svg>',
+  };
+
+  function segmented(el, items, current, onPick) {
+    el.innerHTML = items
+      .map((it) => `<button type="button" role="radio" aria-checked="${it.id === current}" data-id="${esc(it.id)}">${it.icon || ""}${esc(it.label)}</button>`)
+      .join("");
+    el.onclick = (e) => {
+      const b = e.target.closest("button[data-id]");
+      if (!b) return;
+      onPick(b.dataset.id);
+      el.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+    };
+  }
+
+  let toastTimer = 0;
+  function toast(msg, ms = 1600) {
+    const el = $("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("show"), ms);
+  }
+
+  async function copy(value, button, label) {
+    let ok = false;
+    try { await navigator.clipboard.writeText(value); ok = true; } catch {
+      // file:// or an old browser: fall back to a hidden textarea.
+      const ta = document.createElement("textarea");
+      ta.value = value;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { ok = document.execCommand("copy"); } catch { ok = false; }
+      ta.remove();
+    }
+    if (!ok) { toast("The browser blocked copying: select the text and press Ctrl+C or ⌘C", 3200); return; }
+    button.innerHTML = ICON.check + "Copied";
+    toast("Copied");
+    setTimeout(() => (button.innerHTML = ICON.copy + esc(label)), 1600);
+  }
+
+  // ---------------------------------------------------------------- the page around the post
+
+  function drawHead() {
+    document.title = (DATA.title || "LinkedIn post") + " · LinkedIn";
+    $("title").textContent = DATA.title || "LinkedIn post";
+    const parts = [`<span class="chip accent">Draft</span>`];
+    parts.push(`<span>${esc(author.name)}${author.title ? " · " + esc(author.title) : ""}</span>`);
+    $("meta").innerHTML = parts.join("");
+  }
+
+  /** Notes are plain text: blank lines split paragraphs, lines starting with "- " make a list. */
+  function noteHtml(s) {
+    return String(s || "").trim().split(/\n\s*\n/).map((block) => {
+      const lines = block.split("\n");
+      if (lines.every((l) => /^\s*[-*•]\s+/.test(l))) {
+        return "<ul>" + lines.map((l) => "<li>" + richText(l.replace(/^\s*[-*•]\s+/, "")) + "</li>").join("") + "</ul>";
+      }
+      return "<p>" + richText(block) + "</p>";
+    }).join("");
+  }
+
+  function drawBlocks() {
+    const out = [];
+    const items = (DATA.checklist || []).filter((c) => String(c).trim());
+    if (items.length) {
+      out.push(`<section class="panel"><h2>Check before publishing</h2><ul class="checks">${items
+        .map((c, i) => `<li><label><input type="checkbox" data-check="${i}" ${state.checks[i] ? "checked" : ""}><span>${esc(c)}</span></label></li>`)
+        .join("")}</ul></section>`);
+    }
+    (DATA.notes || []).filter((n) => n && String(n.text || "").trim()).forEach((n) => {
+      out.push(`<section class="panel"><h2>${esc(n.title || "Notes")}</h2><div class="prose">${noteHtml(n.text)}</div></section>`);
+    });
+    // A lone last block keeps the full width.
+    if (out.length % 2 === 1) out[out.length - 1] = out[out.length - 1].replace('class="panel"', 'class="panel wide"');
+    $("blocks").innerHTML = out.join("");
+    $("blocks").onchange = (e) => {
+      const i = e.target.dataset && e.target.dataset.check;
+      if (i === undefined) return;
+      state.checks[i] = e.target.checked;
+      persist();
+    };
+    $("foot").textContent = [DATA.rendered ? "Rendered " + DATA.rendered : "", "Made with the LinkedIn preview skill"].filter(Boolean).join(" · ");
+  }
+
+  // ---------------------------------------------------------------- wiring
+
+  function init() {
+    drawHead();
+    [["au-name", "name"], ["au-title", "title"]].forEach(([id, k]) => {
+      const el = $(id);
+      el.value = state.author[k] || (k === "name" ? AUTHOR.name : AUTHOR.title) || "";
+      el.addEventListener("input", () => {
+        state.author[k] = el.value;
+        persist();
+        drawHead();
+        drawCards();
+      });
+    });
+    segmented($("device"), ["phone", "desktop"].map((d) => ({ id: d, label: DEVICE_LABEL[d], icon: ICON[d] })), state.device, (d) => {
+      state.device = d;
+      persist();
+      drawCards();
+    });
+
+    const post = $("post");
+    // Grow with the text: border-box height = scrollHeight + the 2px border.
+    const grow = () => { post.style.height = "auto"; post.style.height = post.scrollHeight + 2 + "px"; };
+    post.value = state.post;
+    requestAnimationFrame(grow);
+    window.addEventListener("resize", grow);
+    post.addEventListener("input", () => {
+      grow();
+      state.post = post.value;
+      persist();
+      drawPreview();
+    });
+    $("reset").onclick = () => {
+      state.post = ORIGINAL.post;
+      post.value = state.post;
+      grow();
+      persist();
+      drawPreview();
+    };
+    $("copy-post").innerHTML = ICON.copy + "Copy the post";
+    $("copy-post").onclick = (e) => copy(state.post, e.currentTarget, "Copy the post");
+
+    const cm = $("comment");
+    cm.value = state.comment;
+    cm.placeholder = "Optional: links go here, not in the post.";
+    cm.addEventListener("input", () => {
+      state.comment = cm.value;
+      persist();
+      drawPreview();
+    });
+    $("cm-note").textContent = "Optional. Shown under the post in the preview, from the author.";
+    $("copy-comment").innerHTML = ICON.copy + "Copy the comment";
+    $("copy-comment").onclick = (e) => copy(state.comment, e.currentTarget, "Copy the comment");
+
+    $("fold").onclick = () => { state.open = !state.open; drawCards(); };
+    $("cards").addEventListener("click", (e) => {
+      if (e.target.closest("[data-open]")) { state.open = true; drawCards(); }
+    });
+
+    drawPreview();
+    drawBlocks();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
