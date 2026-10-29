@@ -189,6 +189,10 @@ textarea.compose { width: min(100%, 538px); padding: 12px 14px; font: 14px/20px 
 .checks input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--accent); }
 .checks input:checked + span { color: var(--ink-soft); text-decoration: line-through; text-decoration-color: var(--ink-faint); }
 .foot { margin-top: 32px; font-size: 11px; color: var(--ink-soft); }
+.foot p { margin: 0 0 6px; }
+.foot a { text-decoration: underline; text-underline-offset: 2px; }
+.foot a:hover { color: var(--ink); }
+.foot .promo { font-size: 12px; }
 .toast { position: fixed; left: 50%; bottom: 20px; transform: translate(-50%, 20px); opacity: 0; max-width: calc(100vw - 32px); text-align: center; background: var(--ink); color: #fff; border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 600; pointer-events: none; transition: opacity 160ms, transform 160ms; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 @media (prefers-reduced-motion: reduce) { .toast, .btn, .seg button { transition: none; } }
@@ -250,7 +254,11 @@ textarea.compose { width: min(100%, 538px); padding: 12px 14px; font: 14px/20px 
   </div>
 
   <div class="blocks" id="blocks"></div>
-  <p class="foot" id="foot"></p>
+  <footer class="foot">
+    <p><span id="rendered"></span>Made with the <a href="https://github.com/WIPexpert/linkedin-preview" target="_blank" rel="noopener">LinkedIn preview skill</a> by Mike Daykhin, open source under MIT</p>
+    <!-- The author's ad. Remove this line in your fork if you like. -->
+    <p class="promo">Job hunting? <a href="https://talenthunt.work/?utm_source=lipv&amp;utm_medium=footer&amp;utm_campaign=signup" target="_blank" rel="noopener">talenthunt</a> turns your CV into a conversation.</p>
+  </footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -607,7 +615,7 @@ textarea.compose { width: min(100%, 538px); padding: 12px 14px; font: 14px/20px 
       state.checks[i] = e.target.checked;
       persist();
     };
-    $("foot").textContent = [DATA.rendered ? "Rendered " + DATA.rendered : "", "Made with the LinkedIn preview skill"].filter(Boolean).join(" · ");
+    $("rendered").textContent = DATA.rendered ? "Rendered " + DATA.rendered + " · " : "";
   }
 
   // ---------------------------------------------------------------- wiring

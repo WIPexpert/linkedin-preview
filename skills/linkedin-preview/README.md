@@ -1,6 +1,6 @@
 # LinkedIn preview
 
-**Version:** 7 · **Created:** 2026-10-28 18:15 · **Updated:** 2026-10-29 09:57
+**Version:** 8 · **Created:** 2026-10-28 18:15 · **Updated:** 2026-10-29 10:04
 
 A skill for Claude Code (or any agent that reads `SKILL.md` skills). Ask it to
 write a LinkedIn post and you get one HTML file back: the post previewed in
@@ -176,3 +176,6 @@ page. The 3,000-character cap (`POST_LIMIT`) is exact.
   page is opened from disk, and shows a message if the browser blocks both.
 - The page never shows the post in a monospace or code font, and nothing on
   it scrolls sideways, down to a 375-pixel phone screen.
+- The footer links to this repository and carries one line of the author's
+  ad for talenthunt, with a tracked link. It sits in
+  `assets/linkedin-preview.html`, marked with a comment, if you want it out.
