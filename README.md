@@ -23,8 +23,8 @@ The file itself is
 
 ## Why I made this
 
-<div style="display:flex;gap:16px;align-items:flex-start;padding:18px 20px;border-radius:16px;background:#f6f3ff;border:1px solid #e2dbff;margin:0 0 16px">
-  <a href="https://talenthunt.work/?utm_source=lipv&utm_medium=btn&utm_campaign=signup&utm_content=readme"><img src="assets/talenthunt-logo.svg" alt="talenthunt" width="56" height="50"></a>
+<div style="padding:18px 20px;border-radius:16px;background:#f6f3ff;border:1px solid #e2dbff;margin:0 0 16px">
+  <a href="https://talenthunt.work/?utm_source=lipv&utm_medium=btn&utm_campaign=signup&utm_content=readme"><img src="assets/talenthunt-logo.svg" alt="talenthunt" width="56" height="50" style="display:block;width:56px;height:50px;max-width:none;margin:0 0 12px"></a>
   <div>
     <p style="margin:0 0 10px">I'm Mike Daykhin, a solo founder. I write my LinkedIn posts with Claude, and every one of them still needed formatting inside LinkedIn before I could publish it. That is time I would rather spend on the product, so now Claude hands me the post the way the feed will show it, and I paste it once.</p>
     <p style="margin:0 0 14px">The product is <a href="https://talenthunt.work/?utm_source=lipv&utm_medium=btn&utm_campaign=signup&utm_content=readme">talenthunt</a>. It turns your CV into a live profile that answers questions from recruiters and AI agents, and it is always free for job seekers.</p>
