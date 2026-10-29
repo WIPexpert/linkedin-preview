@@ -1,6 +1,6 @@
 # LinkedIn preview
 
-**Version:** 2 · **Created:** 2026-10-28 20:22 · **Updated:** 2026-10-29 09:57
+**Version:** 3 · **Created:** 2026-10-28 20:22 · **Updated:** 2026-10-29 10:02
 
 A Claude Code skill for writing LinkedIn posts. Ask Claude to write a post and
 it hands you one HTML page instead of a block of text in the chat. The page
@@ -49,3 +49,14 @@ You need Python 3.8 or later (standard library only) and a browser.
 
 How the skill works, the input format, the renderer and how the "…more" cut
 is measured: [`skills/linkedin-preview/README.md`](skills/linkedin-preview/README.md).
+
+## Contributing
+
+Found a post the preview cuts in the wrong place, or LinkedIn changed its
+layout? Open an issue with the post text and what you saw in the feed, or
+send a pull request. Keep the page a single file with no network calls and
+the renderer on the Python standard library.
+
+## License
+
+[MIT](LICENSE)

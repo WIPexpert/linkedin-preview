@@ -2,8 +2,16 @@
   "name": "linkedin-preview",
   "version": "1.0.0",
   "description": "Write a LinkedIn post and get one HTML page that previews it in the feed (phone and desktop, cut at \"…more\"), with an editor, a 3,000-character counter and copy buttons.",
-  "author": { "name": "Mike Daykhin" },
+  "author": {
+    "name": "Mike Daykhin"
+  },
   "homepage": "https://github.com/WIPexpert/linkedin-preview",
   "repository": "https://github.com/WIPexpert/linkedin-preview",
-  "keywords": ["linkedin", "writing", "preview", "skill"]
+  "license": "MIT",
+  "keywords": [
+    "linkedin",
+    "writing",
+    "preview",
+    "skill"
+  ]
 }
