@@ -1,6 +1,6 @@
 # LinkedIn preview
 
-**Version:** 1 · **Created:** 2026-10-28 20:22 · **Updated:** 2026-10-28 20:22
+**Version:** 2 · **Created:** 2026-10-28 20:22 · **Updated:** 2026-10-29 09:57
 
 A Claude Code skill for writing LinkedIn posts. Ask Claude to write a post and
 it hands you one HTML page instead of a block of text in the chat. The page
@@ -15,11 +15,11 @@ disk or send it to someone.
 
 ## See an example
 
-[`skills/linkedin-preview/examples/post.html`](skills/linkedin-preview/examples/post.html)
-is a finished page, rendered from
-[`examples/post.md`](skills/linkedin-preview/examples/post.md). GitHub shows
-HTML files as source, so download the file (Raw, then save) and open it in a
-browser.
+[Open the example page](https://wipexpert.github.io/linkedin-preview/skills/linkedin-preview/examples/post.html): a finished post, rendered from
+[`examples/post.md`](skills/linkedin-preview/examples/post.md). Try the
+phone and desktop views, unfold the post, edit it and watch the cut move.
+The file itself is
+[`skills/linkedin-preview/examples/post.html`](skills/linkedin-preview/examples/post.html).
 
 ## Install
 

@@ -1,6 +1,6 @@
 # LinkedIn preview
 
-**Version:** 6 · **Created:** 2026-10-28 18:15 · **Updated:** 2026-10-28 20:22
+**Version:** 7 · **Created:** 2026-10-28 18:15 · **Updated:** 2026-10-29 09:57
 
 A skill for Claude Code (or any agent that reads `SKILL.md` skills). Ask it to
 write a LinkedIn post and you get one HTML file back: the post previewed in
@@ -48,7 +48,7 @@ Requirements: Python 3.8+ (standard library only) and a browser.
 | `scripts/render.py` | Fills the template from your input and checks the feed cut |
 | `examples/post.md` | An example input in markdown |
 | `examples/post.json` | The same idea as JSON |
-| `examples/post.html` | `post.md`, rendered |
+| `examples/post.html` | `post.md`, rendered ([open it online](https://wipexpert.github.io/linkedin-preview/skills/linkedin-preview/examples/post.html)) |
 
 ## Run the renderer yourself
 
