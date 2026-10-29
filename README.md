@@ -1,6 +1,6 @@
 # LinkedIn preview
 
-**Version:** 4 · **Created:** 2026-10-28 20:22 · **Updated:** 2026-10-29 17:18
+**Version:** 5 · **Created:** 2026-10-28 20:22 · **Updated:** 2026-10-29 17:36
 
 A Claude Code skill for writing LinkedIn posts. Ask Claude to write a post and
 it hands you one HTML page instead of a block of text in the chat. The page
@@ -76,6 +76,8 @@ is measured: [`skills/linkedin-preview/README.md`](skills/linkedin-preview/READM
   for people who hire: paste a job description and get a LinkedIn post that
   tells candidates in seconds whether the role is theirs, with a fit check
   link. Free during the open beta.
+- [JobHunt](https://t.me/JobsChannel_1), a Telegram channel in English with
+  roles picked by curators. The same curators fill the talenthunt job board.
 
 ## Contributing
 
