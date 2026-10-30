@@ -172,8 +172,12 @@ page. The 3,000-character cap (`POST_LIMIT`) is exact.
 - Editing the post or the comment updates the preview, the cut, the counts
   under the preview and the counter under the editor as you type. Edits are kept in the browser's local storage for that page
   only; "Back to the original text" restores the rendered version.
-- Copy uses the clipboard API, falls back to the older copy command when the
-  page is opened from disk, and shows a message if the browser blocks both.
+- Copy puts the text on the clipboard twice, as plain text and as HTML with
+  one paragraph per line and an empty paragraph for each blank line. LinkedIn's
+  post and comment boxes run plain-text paragraphs together on paste and keep
+  them from the HTML. It falls back to the plain text and the older copy
+  command when the page is opened from disk, and shows a message if the
+  browser blocks all of them.
 - The page never shows the post in a monospace or code font, and nothing on
   it scrolls sideways, down to a 375-pixel phone screen.
 - The footer links to this repository and carries one line of the author's

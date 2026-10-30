@@ -267,7 +267,7 @@ textarea.compose { width: min(100%, 538px); padding: 12px 14px; font: 14px/20px 
 {
  "schema": 1,
  "title": "Three support tickets",
- "rendered": "2026-10-29 10:04",
+ "rendered": "2026-10-30 11:54",
  "author": {
   "name": "Alex Morgan",
   "title": "Head of Product at Northwind",
@@ -571,10 +571,30 @@ textarea.compose { width: min(100%, 538px); padding: 12px 14px; font: 14px/20px 
     toastTimer = setTimeout(() => el.classList.remove("show"), ms);
   }
 
+  // LinkedIn's post and comment boxes run plain-text paragraphs together on paste.
+  // A rich-text editor keeps a gap only as an empty paragraph, so the clipboard gets
+  // the text twice: as HTML (one <p> per line, a blank line is <p><br></p>) and as
+  // plain text for every target that reads only that.
+  function toHtml(value) {
+    return value.replace(/\r\n?/g, "\n").split("\n")
+      .map((line) => (line.trim() ? "<p>" + esc(line) + "</p>" : "<p><br></p>"))
+      .join("");
+  }
+
   async function copy(value, button, label) {
     let ok = false;
-    try { await navigator.clipboard.writeText(value); ok = true; } catch {
-      // file:// or an old browser: fall back to a hidden textarea.
+    try {
+      if (typeof ClipboardItem !== "undefined") {
+        await navigator.clipboard.write([new ClipboardItem({
+          "text/html": new Blob([toHtml(value)], { type: "text/html" }),
+          "text/plain": new Blob([value], { type: "text/plain" }),
+        })]);
+      } else {
+        await navigator.clipboard.writeText(value);
+      }
+      ok = true;
+    } catch {
+      // file:// or an old browser: fall back to a hidden textarea (plain text only).
       const ta = document.createElement("textarea");
       ta.value = value;
       ta.setAttribute("readonly", "");
